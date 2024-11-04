@@ -15,6 +15,11 @@ use crate::{
 
 use super::layer::{Layer, LayerGradient};
 
+// Struct to store layer neuron's activation values
+struct ForwardPassState {
+    layer_activations: Vec<Vec<f32>>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuralNetwork {
     pub layers: Vec<Layer>,
@@ -64,11 +69,6 @@ impl NeuralNetwork {
     pub fn train_batch(&mut self, batch: &Batch<Vec<f32>>, learning_rate: f32) -> f32 {
         let batch_size = batch.inputs.len();
 
-        // Struct to store layer neuron's activation values
-        struct ForwardPassState {
-            layer_activations: Vec<Vec<f32>>,
-        }
-
         // Perform forward propogation for each input in the batch and store states
         let forward_states: Vec<ForwardPassState> = batch
             .inputs
@@ -98,7 +98,20 @@ impl NeuralNetwork {
             .sum();
 
         // Calculate gradients
-        let batch_gradients: Vec<Vec<LayerGradient>> = forward_states
+        let batch_gradients: Vec<Vec<LayerGradient>> =
+            self.compute_gradients(forward_states, batch);
+        // Apply the batch's accumulated gradients
+        self.apply_gradients(batch_gradients, learning_rate, batch_size);
+
+        total_loss / batch_size as f32
+    }
+
+    fn compute_gradients(
+        &mut self,
+        forward_states: Vec<ForwardPassState>,
+        batch: &Batch<Vec<f32>>,
+    ) -> Vec<Vec<LayerGradient>> {
+        forward_states
             .par_iter()
             .zip(&batch.targets)
             .map(|(state, target)| {
@@ -175,12 +188,7 @@ impl NeuralNetwork {
                 layer_gradients.reverse();
                 layer_gradients
             })
-            .collect();
-
-        // Apply the batch's accumulated gradients
-        self.apply_gradients(batch_gradients, learning_rate, batch_size);
-
-        total_loss / batch_size as f32
+            .collect()
     }
 
     pub fn apply_gradients(
