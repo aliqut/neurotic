@@ -8,6 +8,7 @@ use super::{neuron::Neuron, Connection};
 pub struct Layer {
     pub neurons: Vec<Neuron>,
     pub activation_function: ActivationFunction,
+    pub activation_buffer: Vec<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,13 +39,14 @@ impl Layer {
         Self {
             neurons,
             activation_function,
+            activation_buffer: Vec::new(),
         }
     }
 
-    pub fn forward(&mut self, inputs: &[f32]) -> Vec<f32> {
-        self.neurons
-            .iter_mut()
-            .map(|neuron| {
+    pub fn forward(&mut self, inputs: &[f32]) -> &[f32] {
+        self.activation_buffer.clear();
+        self.activation_buffer
+            .extend(self.neurons.iter_mut().map(|neuron| {
                 let weighted_sum: f32 = neuron
                     .connections
                     .iter()
@@ -55,8 +57,8 @@ impl Layer {
 
                 neuron.activation = self.activation_function.activate(weighted_sum);
                 neuron.activation
-            })
-            .collect()
+            }));
+        &self.activation_buffer
     }
 
     pub fn apply_gradients(

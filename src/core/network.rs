@@ -51,8 +51,8 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn forward(&mut self, inputs: &[f32]) -> Vec<f32> {
-        let mut current_outputs = inputs.to_vec();
+    pub fn forward<'a>(&'a mut self, inputs: &'a [f32]) -> &'a [f32] {
+        let mut current_outputs = inputs;
 
         for layer in self.layers.iter_mut().skip(1) {
             current_outputs = layer.forward(&current_outputs);
