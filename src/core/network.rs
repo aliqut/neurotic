@@ -5,6 +5,9 @@ use std::{
 };
 
 use rayon::iter::IntoParallelRefIterator;
+use rmp_serde::decode;
+use rmp_serde::encode;
+use rmp_serde::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -201,17 +204,32 @@ impl NeuralNetwork {
     }
 
     pub fn save(&self, filename: &str) -> io::Result<()> {
-        let serialized = serde_json::to_string_pretty(self)?;
+        // Serialize NeuralNetwork data using MessagePack
+        let serialized = encode::to_vec(self).expect("Failed to serialize NeuralNetwork data");
+
+        // Create file to store trained network
         let mut file = File::create(filename)?;
-        file.write_all(serialized.as_bytes())?;
+
+        // Write serialized data to the file
+        file.write_all(&serialized)?;
+
         Ok(())
     }
 
     pub fn load(filename: &str) -> io::Result<Self> {
+        // Open file at "filename" path
         let mut file = File::open(filename)?;
-        let mut contents = String::new();
-        let _ = file.read_to_string(&mut contents);
-        let network: NeuralNetwork = serde_json::from_str(&contents)?;
+
+        // Create vector to store file contents
+        let mut contents = Vec::new();
+
+        // Read file's contents to contents vector
+        file.read_to_end(&mut contents)?;
+
+        // Deserialize data into NeuralNetwork struct
+        let network: NeuralNetwork =
+            decode::from_slice(&contents).expect("Failed to deserialize NeuralNetwork data");
+
         Ok(network)
     }
 }

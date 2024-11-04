@@ -1,2 +1,4 @@
 /target
 /src/main.rs
+collect_files.sh
+dump.txt
