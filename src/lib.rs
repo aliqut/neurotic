@@ -1,3 +1,8 @@
+//! # Neurotic
+//!
+//! `neurotic` is a library for machine-learning in Rust.
+
+/// Core components of the library.
 pub mod core {
     mod connection;
     mod layer;
@@ -8,12 +13,14 @@ pub mod core {
     pub use network::NeuralNetwork;
 }
 
+/// Activation functions including ReLU, LeakyReLU, Sigmoid, etc.
 pub mod activation {
     mod functions;
 
     pub use functions::ActivationFunction;
 }
 
+/// Training modules, cost functions, batching, etc.
 pub mod training {
     mod batch;
     mod cost;

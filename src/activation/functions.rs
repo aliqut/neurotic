@@ -1,15 +1,30 @@
 use serde::{Deserialize, Serialize};
 
+/// Enum representing the different activation functions used for the neural network's layers.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ActivationFunction {
+    /// Rectified Linear Unit (ReLU)
     ReLU,
+    /// Leaky ReLU
     LeakyReLU,
+    /// Sigmoid
     Sigmoid,
+    /// Hyperbolic tangent
     Tanh,
+    /// Identity, linear output
     Identity,
 }
 
 impl ActivationFunction {
+    /// Applies the activation function from the enum ActivationFunction to an input
+    ///
+    /// Arguments:
+    ///
+    /// * `x` - input value
+    ///
+    /// # Returns
+    ///
+    /// The output of the activation function on input
     pub fn activate(&self, x: f32) -> f32 {
         match self {
             Self::ReLU => x.max(0.0),
@@ -26,6 +41,15 @@ impl ActivationFunction {
         }
     }
 
+    /// Applies the derivative of the activation function from the enum ActivationFunction to an input
+    ///
+    /// Arguments:
+    ///
+    /// * `x` - input value
+    ///
+    /// # Returns
+    ///
+    /// The output of the derivative of activation function on input
     pub fn derivative(&self, x: f32) -> f32 {
         match self {
             Self::ReLU => {

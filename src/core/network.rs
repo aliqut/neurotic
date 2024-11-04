@@ -20,6 +20,7 @@ struct ForwardPassState {
     layer_activations: Vec<Vec<f32>>,
 }
 
+/// The NeuralNetwork struct represents a multi-layered neural network.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuralNetwork {
     pub layers: Vec<Layer>,
@@ -27,6 +28,19 @@ pub struct NeuralNetwork {
 }
 
 impl NeuralNetwork {
+    /// Constructs a new `NeuralNetwork`
+    ///
+    /// # Arguments
+    ///
+    /// * `layer_sizes` - Array representing the number of neurons in each layer.
+    /// * `activation_functions` - Array representing the activation function used to compute the
+    /// outputs of each layer.
+    /// * `cost_function` - CostFunction enum for selecting the calculation used to compute the
+    /// cost.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `NeuralNetwork`
     pub fn new(
         layer_sizes: &[usize],
         activation_functions: &[ActivationFunction],
@@ -56,6 +70,15 @@ impl NeuralNetwork {
         }
     }
 
+    /// Perform a forward propagation through the `NeuralNetwork` layers.
+    ///
+    /// # Arguments
+    ///
+    /// * `inputs` - Slice of input values.
+    ///
+    /// # Returns
+    ///
+    /// Vector containing the output values after forward propagation.
     pub fn forward<'a>(&'a mut self, inputs: &'a [f32]) -> &'a [f32] {
         let mut current_outputs = inputs;
 
@@ -66,6 +89,16 @@ impl NeuralNetwork {
         current_outputs
     }
 
+    /// Train the network a batch of data.
+    ///
+    /// # Arguments
+    ///
+    /// * `batch` - A batch of data, containing input data and target outputs.
+    /// * `learning_rate` - Multiplier for the neurons' weight and bias updates.
+    ///
+    /// # Returns
+    ///
+    /// The average loss over each batch.
     pub fn train_batch(&mut self, batch: &Batch<Vec<f32>>, learning_rate: f32) -> f32 {
         let batch_size = batch.inputs.len();
 
@@ -209,6 +242,15 @@ impl NeuralNetwork {
         }
     }
 
+    /// Saves the `NeuralNetwork` struct to a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `filename` - Path to the file where the network will be stored.
+    ///
+    /// # Returns
+    ///
+    /// Returns an io::Result.
     pub fn save(&self, filename: &str) -> io::Result<()> {
         // Serialize NeuralNetwork data using MessagePack
         let serialized = encode::to_vec(self).expect("Failed to serialize NeuralNetwork data");
@@ -222,6 +264,15 @@ impl NeuralNetwork {
         Ok(())
     }
 
+    /// Load the `NeuralNetwork` struct from a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `filename` - Path to the file containing the `NeuralNetwork` data.
+    ///
+    /// # Returns
+    ///
+    /// Returns an io::Result containing the `NeuralNetwork` if loaded successfully.
     pub fn load(filename: &str) -> io::Result<Self> {
         // Open file at "filename" path
         let mut file = File::open(filename)?;

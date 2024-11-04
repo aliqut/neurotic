@@ -4,6 +4,7 @@ use crate::core::NeuralNetwork;
 
 use super::Batch;
 
+/// Manages the training of a `NeuralNetwork`
 #[derive(Clone, Debug)]
 pub struct NetworkTrainer {
     network: NeuralNetwork,
@@ -12,6 +13,17 @@ pub struct NetworkTrainer {
 }
 
 impl NetworkTrainer {
+    /// Construct a new `Network Trainer`.
+    ///
+    /// # Arguments
+    ///
+    /// * `network` - The `NeuralNetwork` to be trained.
+    /// * `learning_rate` - Multiplier for the neurons' weight and bias updates.
+    /// * `batch_size` - Number of samples per training batch to divide the input data into.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `NetworkTrainer`.
     pub fn new(network: NeuralNetwork, learning_rate: f32, batch_size: usize) -> Self {
         Self {
             network,
@@ -20,6 +32,12 @@ impl NetworkTrainer {
         }
     }
 
+    /// Train the network with specified input data and number of epochs.
+    ///
+    /// # Arguments
+    ///
+    /// * `training_data` - Vector of tuples containing the input data and the expected outputs.
+    /// * `epochs` - Number of training iterations.
     pub fn train(&mut self, mut training_data: Vec<(Vec<f32>, Vec<f32>)>, epochs: usize) {
         let mut rng = rand::thread_rng();
 
@@ -53,6 +71,7 @@ impl NetworkTrainer {
         }
     }
 
+    /// Returns a mutable reference to the `NeuralNetwork` associated with the `NetworkTrainer`.
     pub fn get_network(&mut self) -> &mut NeuralNetwork {
         &mut self.network
     }
