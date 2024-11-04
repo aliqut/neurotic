@@ -1,6 +1,14 @@
 [package]
 name = "neurotic"
 version = "0.1.0"
+authors = ["aliqut"]
+description = "A neural network library written for Rust."
+license = "MIT"
+repository = "https://github.com/aliqut/neurotic"
+homepage = "https://github.com/aliqut/neurotic"
+categories = ["machine-learning", "artificial-intelligence", "ai", "neural-network", "neural-networks"]
+keywords = ["neural network", "ai", "rust", "machine learning"]
+readme = "README.md"
 edition = "2021"
 
 [dependencies]
