@@ -5,9 +5,7 @@ use std::{
 };
 
 use rayon::iter::IntoParallelRefIterator;
-use rmp_serde::decode;
-use rmp_serde::encode;
-use rmp_serde::{Deserializer, Serializer};
+use rmp_serde::{decode, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
