@@ -1,8 +1,11 @@
-use ndarray::{Array1, Array2};
+use ndarray::{Array1, Array2, ArrayView1};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
     fs::File,
     io::{self, Read, Write},
 };
+
+use rayon::prelude::*;
 
 use rmp_serde::{decode, encode};
 use serde::{Deserialize, Serialize};
@@ -70,14 +73,14 @@ impl NeuralNetwork {
     /// # Returns
     ///
     /// A vector of tuples with pre-activation and activation values for each layer.
-    pub fn forward(&self, input: &Array1<f32>) -> Vec<(Array1<f32>, Array1<f32>)> {
-        let mut activations = vec![];
-        let mut current_activation = input.clone();
+    pub fn forward(&self, input: &ArrayView1<f32>) -> Vec<(Array1<f32>, Array1<f32>)> {
+        let mut activations = Vec::with_capacity(self.layers.len());
+        let mut current_activation = input.to_owned();
 
         for layer in &self.layers {
-            let (z, activation) = layer.forward(&current_activation);
-            activations.push((z, activation.clone()));
-            current_activation = activation;
+            let (z, activation) = layer.forward(&current_activation.view());
+            current_activation = activation.clone();
+            activations.push((z, activation));
         }
 
         activations
@@ -96,10 +99,9 @@ impl NeuralNetwork {
     pub fn train_batch(&mut self, batch: &Batch, learning_rate: f32) -> f32 {
         let batch_size = batch.inputs.len() as f32;
 
-        let mut total_loss = 0.0;
-
-        let mut weight_gradients: Vec<Array2<f32>> = vec![];
-        let mut bias_gradients: Vec<Array1<f32>> = vec![];
+        // Pre-allocate accumulators
+        let mut weight_gradients: Vec<Array2<f32>> = Vec::with_capacity(self.layers.len());
+        let mut bias_gradients: Vec<Array1<f32>> = Vec::with_capacity(self.layers.len());
 
         // Initialise weight and bias gradient array vectors with zeros based on the layer's
         // dimensions
@@ -108,50 +110,74 @@ impl NeuralNetwork {
             bias_gradients.push(Array1::zeros(layer.biases.dim()));
         }
 
-        for (input, target) in batch.inputs.iter().zip(&batch.targets) {
-            let input = Array1::from_vec(input.clone());
-            let target = Array1::from_vec(target.clone());
+        // Process in parallel for large batches
+        let batch_results: Vec<_> = if batch.inputs.len() > 16 {
+            batch
+                .inputs
+                .par_iter()
+                .zip(&batch.targets)
+                .map(|(input, target)| self.process_training_sample(input, target))
+                .collect()
+        } else {
+            batch
+                .inputs
+                .iter()
+                .zip(&batch.targets)
+                .map(|(input, target)| self.process_training_sample(input, target))
+                .collect()
+        };
 
-            let layer_activations = self.forward(&input);
+        let total_loss: f32 = batch_results.iter().map(|(_, loss)| loss).sum();
 
-            let output = &layer_activations.last().unwrap().1;
-            total_loss += self
-                .cost_function
-                .calculate(&output.to_vec(), &target.to_vec());
+        for layer_idx in 0..self.layers.len() {
+            let weight_shape = weight_gradients[layer_idx].dim();
+            let bias_shape = bias_gradients[layer_idx].dim();
 
-            let mut delta = (output - &target)
-                * &output.map(|&x| {
-                    self.layers
-                        .last()
-                        .unwrap()
-                        .activation_function
-                        .derivative(x)
-                });
+            // Accumulate weight gradients
+            weight_gradients[layer_idx] = batch_results
+                .par_iter()
+                .map(|(gradients, _)| &gradients.0[layer_idx])
+                .fold(
+                    || Array2::zeros(weight_shape),
+                    |mut acc, grad| {
+                        acc += grad;
+                        acc
+                    },
+                )
+                .reduce(
+                    || Array2::zeros(weight_shape),
+                    |mut a, b| {
+                        a += &b;
+                        a
+                    },
+                );
 
-            for i in (0..self.layers.len()).rev() {
-                let (weight_gradient, bias_gradient, new_delta) = if i > 0 {
-                    self.layers[i].backward(
-                        &delta,
-                        &layer_activations[i - 1].1,
-                        &layer_activations[i].0,
-                    )
-                } else {
-                    self.layers[i].backward(&delta, &input, &layer_activations[i].0)
-                };
-
-                if weight_gradients.len() <= i {
-                    weight_gradients.push(weight_gradient);
-                    bias_gradients.push(bias_gradient);
-                } else {
-                    weight_gradients[i] += &weight_gradient;
-                    bias_gradients[i] += &bias_gradient;
-                }
-
-                if i > 0 {
-                    delta = new_delta;
-                }
-            }
+            // Accumulate bias gradients
+            bias_gradients[layer_idx] = batch_results
+                .par_iter()
+                .map(|(gradients, _)| &gradients.1[layer_idx])
+                .fold(
+                    || Array1::zeros(bias_shape),
+                    |mut acc, grad| {
+                        acc += grad;
+                        acc
+                    },
+                )
+                .reduce(
+                    || Array1::zeros(bias_shape),
+                    |mut a, b| {
+                        a += &b;
+                        a
+                    },
+                );
         }
+
+        //for (gradients, _) in batch_results {
+        //    for i in 0..self.layers.len() {
+        //        weight_gradients[i] += &gradients.0[i];
+        //        bias_gradients[i] += &gradients.1[i];
+        //    }
+        //}
 
         for i in 0..self.layers.len() {
             self.layers[i].update_parameters(
@@ -162,6 +188,65 @@ impl NeuralNetwork {
         }
 
         total_loss / batch_size
+    }
+
+    fn process_training_sample(
+        &self,
+        input: &[f32],
+        target: &[f32],
+    ) -> ((Vec<Array2<f32>>, Vec<Array1<f32>>), f32) {
+        let input = Array1::from_vec(input.to_vec());
+        let target = Array1::from_vec(target.to_vec());
+
+        let mut weight_gradients: Vec<Array2<f32>> = Vec::with_capacity(self.layers.len());
+        let mut bias_gradients: Vec<Array1<f32>> = Vec::with_capacity(self.layers.len());
+
+        for layer in &self.layers {
+            weight_gradients.push(Array2::zeros(layer.weights.dim()));
+            bias_gradients.push(Array1::zeros(layer.biases.dim()));
+        }
+
+        let layer_activations = self.forward(&input.view());
+
+        let output = &layer_activations.last().unwrap().1;
+        let loss = self
+            .cost_function
+            .calculate(&output.to_vec(), &target.to_vec());
+
+        let mut delta = (output - &target)
+            * &output.map(|&x| {
+                self.layers
+                    .last()
+                    .unwrap()
+                    .activation_function
+                    .derivative(x)
+            });
+
+        for i in (0..self.layers.len()).rev() {
+            let (weight_gradient, bias_gradient, new_delta) = if i > 0 {
+                self.layers[i].backward(
+                    &delta,
+                    &layer_activations[i - 1].1,
+                    &layer_activations[i].0,
+                )
+            } else {
+                self.layers[i].backward(&delta, &input, &layer_activations[i].0)
+            };
+
+            if weight_gradients.len() <= i {
+                weight_gradients.push(weight_gradient);
+                bias_gradients.push(bias_gradient);
+            } else {
+                weight_gradients[i] += &weight_gradient;
+                bias_gradients[i] += &bias_gradient;
+            }
+
+            if i > 0 {
+                delta = new_delta;
+            }
+        }
+
+        ((weight_gradients, bias_gradients), loss)
     }
 
     /// Saves the `NeuralNetwork` struct to a file.

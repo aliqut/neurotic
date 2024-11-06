@@ -1,5 +1,6 @@
-use ndarray::{Array1, Array2};
+use ndarray::{Array1, Array2, ArrayView1};
 use rand::{distributions::Uniform, prelude::Distribution, thread_rng};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::activation::ActivationFunction;
@@ -59,9 +60,17 @@ impl Layer {
     /// # Returns
     ///
     /// A tuple containing the pre-activation (`z`) and the activation (`a`) outputs.
-    pub fn forward(&self, input: &Array1<f32>) -> (Array1<f32>, Array1<f32>) {
-        let z = &self.weights.dot(input) + &self.biases;
-        let activation = z.map(|&x| self.activation_function.activate(x));
+    pub fn forward(&self, input: &ArrayView1<f32>) -> (Array1<f32>, Array1<f32>) {
+        let z = self.weights.dot(input) + &self.biases;
+        let mut activation = z.clone();
+
+        // If the input is large, use parallel mapping
+        if z.len() > 1000 {
+            activation.par_mapv_inplace(|x| self.activation_function.activate(x));
+        } else {
+            activation.mapv_inplace(|x| self.activation_function.activate(x));
+        }
+
         (z, activation)
     }
 
@@ -82,8 +91,18 @@ impl Layer {
         prev_activation: &Array1<f32>,
         z: &Array1<f32>,
     ) -> (Array2<f32>, Array1<f32>, Array1<f32>) {
+        // Create array to store derivatives
+        let mut z_derivative = z.clone();
+
+        // Compute in parallel for large values
+        if z.len() > 1000 {
+            z_derivative.par_mapv_inplace(|x| self.activation_function.derivative(x));
+        } else {
+            z_derivative.mapv_inplace(|x| self.activation_function.derivative(x));
+        }
+
         // Calculate loss gradient
-        let delta = delta * &z.map(|&x| self.activation_function.derivative(x));
+        let delta = delta * z_derivative;
 
         // Calculate weight gradients
         let weight_gradients = delta.view().to_shape((delta.len(), 1)).unwrap().dot(
@@ -93,12 +112,9 @@ impl Layer {
                 .unwrap(),
         );
 
-        // Get bias gradient
-        let bias_gradients = delta.clone();
-
         let prev_delta = self.weights.t().dot(&delta);
 
-        (weight_gradients, bias_gradients, prev_delta)
+        (weight_gradients, delta.clone(), prev_delta)
     }
 
     /// Updates the layer's parameters based on provided gradients.
