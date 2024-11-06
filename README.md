@@ -17,51 +17,75 @@ cargo add neurotic
 
 ## Examples
 
-### Creating and training a Neural Network
+### Defining the network architecture
 
+Start by defining the amount of neurons in each layer, and the layers' activation functions.
 ```rust
-fn main() {
-    // Network parameters
-    let layer_sizes = &[2, 32, 16, 1];
-    let activation_functions = &[
-        ActivationFunction::Identity,
-        ActivationFunction::ReLU,
-        ActivationFunction::ReLU,
-        ActivationFunction::Identity,
-    ];
-    let cost_function = CostFunction::MeanSquaredError;
+use neurotic::{
+    activation::ActivationFunction,
+    core::NeuralNetwork,
+    training::{CostFunction, NetworkTrainer},
+};
 
-    // Create the NeuralNetwork
-    let network = NeuralNetwork::new(layer_sizes, activation_functions, cost_function);
+let layer_sizes = &[2, 32, 16, 1]; // 2 neurons for the input layer, 32 and 16 for the hidden
+layers, and 1 output neuron.
+let activation_functions = &[
+    ActivationFunction::Identity,
+    ActivationFunction::ReLU,
+    ActivationFunction::ReLU,
+    ActivationFunction::Identity,
+];
+let cost_function = CostFunction::MeanSquaredError;
 
-    // Load in preprocessed training data
-    let training_data = get_training_data();
-
-    // Training parameters
-    let learning_rate = 0.01;
-    let batch_size = 32;
-    let epochs = 300;
-
-    // Training
-    let mut trainer = NetworkTrainer::new(network, learning_rate, batch_size);
-    trainer.train(training_data, epochs);
-}
+// Create a new instance of NeuralNetwork with the defined structure
+let network = NeuralNetwork::new(layer_sizes, activation_functions, cost_function);
 ```
 
-### Saving/loading networks to/from files
+### Preparing the training data
+
+Load in or generate your training data. Here is a simple example that generates training data for a sum function.
 
 ```rust
-fn main () {
-  // ...
-  // Training code above
+use rand::Rng;
 
-  // Saving the network into a file
-  let trained_network = trainer.get_network();
-  trained_network.save(path/to/file);
-
-  // Loading a network from a file
-  let trained_network = NeuralNetwork::load(path/to/file);
+// This returns a vector of tuples. Each tuple is made up of inputs, and target outputs.
+fn generate_sum_data(size: usize, range: f32) -> Vec<(Vec<f32>, Vec<f32>)> {
+    let mut data = Vec::with_capacity(usize);
+    for _ in 0..size {
+        let a = rand::thread_rng.gen_range(0.0..range);
+        let b = rand::thread_rng.gen_range(0.0..range);
+        let output = a + b;
+        data.push((vec![a, b], vec![output]));
+    }
+    data
 }
+
+// Store the generated training data in a variable
+let training_data = generate_sum_data(1000, 10.0);
+```
+
+### Training the network
+
+Set up the training parameters, and train the network using a `NetworkTrainer`.
+```rust
+let learning_rate = 0.001; // Network's learning rate
+let batch_size = 50; // Divide the training data into batches of this size
+let epochs = 500; // Number of training iterations
+
+let mut trainer = NetworkTrainer::new(network, learning_rate, batch_size);
+trainer.train(training_data, epochs);
+```
+
+### Saving or loading a network
+
+Saving the trained network to a file.
+```rust
+trainer.get_network().save("path/to/file").expect("Failed to save network");
+```
+
+Loading a trained network from a file.
+```rust
+let network = NeuralNetwork::load("path/to/file").expect("Failed to load network");
 ```
 
 ## Contributing
