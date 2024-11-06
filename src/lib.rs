@@ -4,12 +4,9 @@
 
 /// Core components of the library.
 pub mod core {
-    mod connection;
     mod layer;
     mod network;
-    mod neuron;
 
-    pub use connection::Connection;
     pub use network::NeuralNetwork;
 }
 
@@ -20,7 +17,7 @@ pub mod activation {
     pub use functions::ActivationFunction;
 }
 
-/// Training modules, cost functions, batching, etc.
+/// Training modules, such as the network trainer, cost functions, batching, etc.
 pub mod training {
     mod batch;
     mod cost;

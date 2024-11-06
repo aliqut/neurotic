@@ -1,90 +1,120 @@
+use ndarray::{Array1, Array2};
+use rand::{distributions::Uniform, prelude::Distribution, thread_rng};
 use serde::{Deserialize, Serialize};
 
 use crate::activation::ActivationFunction;
 
-use super::{neuron::Neuron, Connection};
-
+/// Represents a layer in the neural network. Each layer has a defined activation function, and two
+/// arrays, one for weights and the other for biases.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Layer {
-    pub neurons: Vec<Neuron>,
+    /// Weight matrix.
+    pub weights: Array2<f32>,
+    /// Bias matrix.
+    pub biases: Array1<f32>,
+    /// Activation function applied to the layer's outputs.
     pub activation_function: ActivationFunction,
-    pub activation_buffer: Vec<f32>,
-}
-
-#[derive(Debug, Clone)]
-pub struct LayerGradient {
-    pub weight_gradients: Vec<Vec<f32>>,
-    pub bias_gradients: Vec<f32>,
-    pub delta: Vec<f32>,
 }
 
 impl Layer {
+    /// Creates a new `Layer` with initialised weights and biases.
+    ///
+    /// # Arguments
+    ///
+    /// * `input_size` - Number of input neurons.
+    /// * `output_size` - Number of output neurons.
+    /// * `activation_function` - ActivationFunction enum variant to use for the layer's outputs.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `Layer` with random weights and zeroed biases.
     pub fn new(
-        neuron_count: usize,
-        connection_count: usize,
+        input_size: usize,
+        output_size: usize,
         activation_function: ActivationFunction,
     ) -> Self {
-        let mut neurons = Vec::with_capacity(neuron_count);
+        let mut rng = thread_rng();
+        let uniform = Uniform::new(-1.0, 1.0);
 
-        for _ in 0..neuron_count {
-            let mut neuron = Neuron::new();
-            if connection_count > 0 {
-                for _ in 0..connection_count {
-                    neuron.connections.push(Connection::new(connection_count));
-                }
-            }
-            neurons.push(neuron);
-        }
+        let weight_scale = (2.0 / (input_size + output_size) as f32).sqrt();
 
+        let weights = Array2::from_shape_fn((output_size, input_size), |_| {
+            uniform.sample(&mut rng) * weight_scale
+        });
+
+        let biases = Array1::zeros(output_size);
         Self {
-            neurons,
+            weights,
+            biases,
             activation_function,
-            activation_buffer: Vec::new(),
         }
     }
 
-    pub fn forward(&mut self, inputs: &[f32]) -> &[f32] {
-        self.activation_buffer.clear();
-        self.activation_buffer
-            .extend(self.neurons.iter_mut().map(|neuron| {
-                let weighted_sum: f32 = neuron
-                    .connections
-                    .iter()
-                    .zip(inputs)
-                    .map(|(connection, &input)| connection.weight * input)
-                    .sum::<f32>()
-                    + neuron.bias;
-
-                neuron.activation = self.activation_function.activate(weighted_sum);
-                neuron.activation
-            }));
-        &self.activation_buffer
+    /// Performs a forward pass on the layer with the given input.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The input array.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the pre-activation (`z`) and the activation (`a`) outputs.
+    pub fn forward(&self, input: &Array1<f32>) -> (Array1<f32>, Array1<f32>) {
+        let z = &self.weights.dot(input) + &self.biases;
+        let activation = z.map(|&x| self.activation_function.activate(x));
+        (z, activation)
     }
 
-    pub fn apply_gradients(
+    /// Performs a backward pass on the layer with the given input.
+    ///
+    /// # Arguments
+    ///
+    /// * `delta` - Error term for the current layer.
+    /// * `prev_activation` - Previous layer's activation values.
+    /// * `z` - Previous layer's pre-activation values.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing weight gradients, bias gradients, and propagated error term.
+    pub fn backward(
+        &self,
+        delta: &Array1<f32>,
+        prev_activation: &Array1<f32>,
+        z: &Array1<f32>,
+    ) -> (Array2<f32>, Array1<f32>, Array1<f32>) {
+        // Calculate loss gradient
+        let delta = delta * &z.map(|&x| self.activation_function.derivative(x));
+
+        // Calculate weight gradients
+        let weight_gradients = delta.view().to_shape((delta.len(), 1)).unwrap().dot(
+            &prev_activation
+                .view()
+                .to_shape((1, prev_activation.len()))
+                .unwrap(),
+        );
+
+        // Get bias gradient
+        let bias_gradients = delta.clone();
+
+        let prev_delta = self.weights.t().dot(&delta);
+
+        (weight_gradients, bias_gradients, prev_delta)
+    }
+
+    /// Updates the layer's parameters based on provided gradients.
+    ///
+    /// # Arguments
+    ///
+    /// * `weight_update` - Gradient for weights.
+    /// * `bias_update` - Gradient for biases.
+    /// * `learning_rate` - Multiplier for the weight and bias gradients to be applied.
+    pub fn update_parameters(
         &mut self,
-        gradients: &Vec<&LayerGradient>,
+        weight_update: &Array2<f32>,
+        bias_update: &Array1<f32>,
         learning_rate: f32,
-        batch_size: f32,
     ) {
-        for (neuron_idx, neuron) in self.neurons.iter_mut().enumerate() {
-            let avg_bias_gradient: f32 = gradients
-                .iter()
-                .map(|gradient| gradient.bias_gradients[neuron_idx])
-                .sum::<f32>()
-                / batch_size;
-
-            neuron.bias -= learning_rate * avg_bias_gradient;
-
-            for (weight_idx, connection) in neuron.connections.iter_mut().enumerate() {
-                let avg_weight_gradient: f32 = gradients
-                    .iter()
-                    .map(|gradient| gradient.weight_gradients[neuron_idx][weight_idx])
-                    .sum::<f32>()
-                    / batch_size;
-
-                connection.weight -= learning_rate * avg_weight_gradient;
-            }
-        }
+        self.weights -= &(learning_rate * weight_update);
+        self.biases -= &(learning_rate * bias_update);
     }
 }

@@ -2,6 +2,11 @@
 
 Neurotic is a **_work in progress_** machine-learning library for Rust.
 
+<div align="center">
+    <a href="https://crates.io/crates/neurotic">crates.io</a>
+    <a href="https://docs.rs/neurotic/0.1.0/neurotic/">docs.rs</a>
+</div>
+
 ## Installation
 
 Add `neurotic` to your Cargo.toml dependencies:

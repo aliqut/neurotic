@@ -1,11 +1,11 @@
 /// Struct representing a batch of training data.
 #[derive(Clone, Debug)]
-pub struct Batch<T> {
+pub struct Batch {
     pub inputs: Vec<Vec<f32>>,
-    pub targets: Vec<T>,
+    pub targets: Vec<Vec<f32>>,
 }
 
-impl<T> Batch<T> {
+impl Batch {
     /// Constructs a new Batch.
     ///
     /// # Arguments
@@ -16,7 +16,7 @@ impl<T> Batch<T> {
     /// # Returns
     ///
     /// A new instance of Batch.
-    pub fn new(inputs: Vec<Vec<f32>>, targets: Vec<T>) -> Self {
+    pub fn new(inputs: Vec<Vec<f32>>, targets: Vec<Vec<f32>>) -> Self {
         Self { inputs, targets }
     }
 }
