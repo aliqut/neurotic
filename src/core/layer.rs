@@ -1,6 +1,5 @@
 use ndarray::{Array1, Array2, ArrayView1};
 use rand::{distributions::Uniform, prelude::Distribution, thread_rng};
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::activation::ActivationFunction;
