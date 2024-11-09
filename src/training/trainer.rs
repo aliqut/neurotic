@@ -1,18 +1,19 @@
 use rand::seq::SliceRandom;
 
-use crate::core::NeuralNetwork;
+use crate::{core::NeuralNetwork, optimisers::Optimiser};
 
 use super::Batch;
 
 /// Manages the training of a `NeuralNetwork`
 #[derive(Clone, Debug)]
-pub struct NetworkTrainer {
+pub struct NetworkTrainer<O: Optimiser> {
     network: NeuralNetwork,
     learning_rate: f32,
     batch_size: usize,
+    optimiser: Option<O>,
 }
 
-impl NetworkTrainer {
+impl<O: Optimiser> NetworkTrainer<O> {
     /// Construct a new `Network Trainer`.
     ///
     /// # Arguments
@@ -24,11 +25,17 @@ impl NetworkTrainer {
     /// # Returns
     ///
     /// A new instance of `NetworkTrainer`.
-    pub fn new(network: NeuralNetwork, learning_rate: f32, batch_size: usize) -> Self {
+    pub fn new(
+        network: NeuralNetwork,
+        learning_rate: f32,
+        batch_size: usize,
+        optimiser: Option<O>,
+    ) -> Self {
         Self {
             network,
             learning_rate,
             batch_size,
+            optimiser,
         }
     }
 
@@ -56,7 +63,10 @@ impl NetworkTrainer {
 
             let total_loss: f32 = batches
                 .iter()
-                .map(|batch| self.network.train_batch(batch, self.learning_rate))
+                .map(|batch| {
+                    self.network
+                        .train_batch(batch, self.learning_rate, self.optimiser.as_mut())
+                })
                 .sum();
 
             let avg_loss = total_loss / batches.len() as f32;

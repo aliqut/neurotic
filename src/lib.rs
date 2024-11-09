@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! ![382830171-f6e61aed-b964-4a38-b3b3-07b0dba68b1f](https://github.com/user-attachments/assets/fd127726-39a5-4902-b348-afad105a43f6)
 //!
 //! `neurotic` is a library for machine-learning in Rust.
@@ -80,6 +81,7 @@ pub mod core {
     mod layer;
     mod network;
 
+    pub use layer::Layer;
     pub use network::NeuralNetwork;
 }
 
@@ -99,4 +101,17 @@ pub mod training {
     pub use batch::Batch;
     pub use cost::CostFunction;
     pub use trainer::NetworkTrainer;
+}
+
+/// Network training optimisers, such as the RMSProp and Adam optimiser.
+pub mod optimisers {
+    mod adam;
+    mod no_optimiser;
+    mod optimiser;
+    mod rmsprop;
+
+    //pub use adam::Adam;
+    pub use no_optimiser::NoOptimiser;
+    pub use optimiser::Optimiser;
+    pub use rmsprop::RMSProp;
 }

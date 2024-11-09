@@ -1,7 +1,9 @@
 /// Struct representing a batch of training data.
 #[derive(Clone, Debug)]
 pub struct Batch {
+    /// Input data for training. Inner vector contains training samples.
     pub inputs: Vec<Vec<f32>>,
+    /// Input labels for training. Inner vector contains training labels.
     pub targets: Vec<Vec<f32>>,
 }
 

@@ -132,4 +132,21 @@ impl Layer {
         self.weights -= &(learning_rate * weight_update);
         self.biases -= &(learning_rate * bias_update);
     }
+
+    /// Updates the layer's parameters based on provided gradients.
+    /// _This function is used for updating parameters using an `Optimiser`, unlike
+    /// `update_parameters()`._
+    ///
+    /// # Arguments
+    ///
+    /// * `weight_update` - Gradient for weights.
+    /// * `bias_update` - Gradient for biases.
+    pub fn update_parameters_optimised(
+        &mut self,
+        weight_update: Array2<f32>,
+        bias_update: Array1<f32>,
+    ) {
+        self.weights += &weight_update;
+        self.biases += &bias_update;
+    }
 }

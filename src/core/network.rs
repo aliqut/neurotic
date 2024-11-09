@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     activation::ActivationFunction,
+    optimisers::Optimiser,
     training::{Batch, CostFunction},
 };
 
@@ -96,7 +97,12 @@ impl NeuralNetwork {
     /// # Returns
     ///
     /// The average loss over each batch.
-    pub fn train_batch(&mut self, batch: &Batch, learning_rate: f32) -> f32 {
+    pub fn train_batch<O: Optimiser>(
+        &mut self,
+        batch: &Batch,
+        learning_rate: f32,
+        mut optimiser: Option<&mut O>,
+    ) -> f32 {
         let batch_size = batch.inputs.len() as f32;
 
         // Pre-allocate accumulators
@@ -180,11 +186,19 @@ impl NeuralNetwork {
         //}
 
         for i in 0..self.layers.len() {
-            self.layers[i].update_parameters(
-                &(&weight_gradients[i] / batch_size),
-                &(&bias_gradients[i] / batch_size),
-                learning_rate,
-            );
+            if let Some(ref mut optimiser) = optimiser {
+                optimiser.update(&weight_gradients[i], &bias_gradients[i], i);
+                let weight_update = optimiser.get_updated_weights(i, learning_rate);
+                let bias_update = optimiser.get_updated_biases(i, learning_rate);
+                self.layers[i].update_parameters_optimised(weight_update, bias_update);
+            } else {
+                // Standard update if no optimiser is used
+                self.layers[i].update_parameters(
+                    &(&weight_gradients[i] / batch_size),
+                    &(&bias_gradients[i] / batch_size),
+                    learning_rate,
+                );
+            }
         }
 
         total_loss / batch_size
