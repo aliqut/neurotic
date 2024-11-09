@@ -88,6 +88,26 @@ Loading a trained network from a file.
 let network = NeuralNetwork::load("path/to/file").expect("Failed to load network");
 ```
 
+### Using Optimisers
+
+Using Optimisers. Adam optimiser for this example. 
+_Refer to the docs.rs page for other optimisers' parameters._
+```rust
+// Defining optimiser parameters and creating new optimiser.
+let layer_dimensions = layer_sizes
+    .windows(2)
+    .map(|w| (w[1], w[0]))
+    .collect::<Vec<_>>();
+let beta1 = 0.9;
+let beta2 = 0.999;
+let epsilon = 1e-8;
+let adam = Adam::new(&layer_dims, beta1, beta2, epsilon);
+
+// Creating a new trainer with the optimiser
+let mut trainer: NetworkTrainer<Adam> =
+    NetworkTrainer::new(network, learning_rate, batch_size, Some(adam));
+```
+
 ## Contributing
 Pull requests are the best way to propose changes to the program.
 
