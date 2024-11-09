@@ -27,9 +27,9 @@ impl RMSProp {
     ///
     /// # Arguments
     ///
-    /// * `layer_sizes` -.
-    /// * `decay_rate` -.
-    /// * `epsilon` - .
+    /// * `layer_sizes` - Layer dimensions.
+    /// * `decay_rate` - Decay rate for the moving average.
+    /// * `epsilon` - Small epsilon value to prevent division by zero.
     ///
     /// # Returns
     ///

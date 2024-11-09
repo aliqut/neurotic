@@ -110,7 +110,7 @@ pub mod optimisers {
     mod optimiser;
     mod rmsprop;
 
-    //pub use adam::Adam;
+    pub use adam::Adam;
     pub use no_optimiser::NoOptimiser;
     pub use optimiser::Optimiser;
     pub use rmsprop::RMSProp;
