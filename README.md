@@ -72,7 +72,7 @@ let learning_rate = 0.001; // Network's learning rate
 let batch_size = 50; // Divide the training data into batches of this size
 let epochs = 500; // Number of training iterations
 
-let mut trainer = NetworkTrainer::new(network, learning_rate, batch_size);
+let mut trainer: NetworkTrainer<NoOptimiser> = NetworkTrainer::new(network, learning_rate, batch_size, None);
 trainer.train(training_data, epochs);
 ```
 
