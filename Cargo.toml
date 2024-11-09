@@ -1,6 +1,6 @@
 [package]
 name = "neurotic"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["aliqut"]
 description = "A neural network library written for Rust."
 license = "MIT"
