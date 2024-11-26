@@ -7,6 +7,19 @@ Neurotic is a **_work in progress_** machine-learning library for Rust.
     <a href="https://docs.rs/neurotic/0.2.1/neurotic/">docs.rs</a>
 </div>
 
+## Roadmap
+
+_List features to be implemented:_
+
+- GPU Acceleration support
+- Autotuning
+- Convolutional Layers
+- Recurrent Layers
+- Regularisation
+- Performance metric output
+- ONNX Support
+- Reduced Precision Training
+
 ## Installation
 
 Add `neurotic` to your Cargo.toml dependencies:
